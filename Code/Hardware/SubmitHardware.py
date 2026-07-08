@@ -1,5 +1,9 @@
+import os
 from qiskit_ibm_runtime import QiskitRuntimeService, SamplerV2 as Sampler
 from qiskit.transpiler.preset_passmanagers import generate_preset_pass_manager
+
+MY_IBM_API_KEY = "cL3TvydWUlcyfKhqUpfuM8RP6q3A9msBA40JCzWmAt9g"
+
 
 def submit_to_hardware(qc, shots=4096, min_num_qubits=None, backend_name=None,
                        optimization_level=3):
@@ -7,7 +11,13 @@ def submit_to_hardware(qc, shots=4096, min_num_qubits=None, backend_name=None,
     Transpiles and submits a circuit to real IBM Quantum hardware.
     Robustly handles backend filtering and avoids non-ASCII character errors.
     """
-    service = QiskitRuntimeService()
+    # Initialize the service using the variable defined at the top
+    if MY_IBM_API_KEY and MY_IBM_API_KEY != "PASTE_YOUR_NEW_IBM_QUANTUM_API_KEY_HERE":
+        service = QiskitRuntimeService(channel="ibm_quantum_platform", token=MY_IBM_API_KEY)
+    else:
+        # Fallback to local disk credentials if the variable above wasn't updated
+        print("[INFO] No valid API key found at the top variable. Checking local disk credentials...")
+        service = QiskitRuntimeService()
 
     if min_num_qubits is None:
         min_num_qubits = qc.num_qubits

@@ -27,7 +27,7 @@ def GiveQubitCount(dimension):
   return QubitCount
 
 def Initiate():
-  NumberChoices = [27]
+  NumberChoices = [26]
   N = random.choice(NumberChoices)
   Dimension = DimensionGiver(N)
   print(f"Dimension: {Dimension}")
