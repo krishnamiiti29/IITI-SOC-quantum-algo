@@ -1,6 +1,6 @@
 """
 Advanced error mitigation toolkit: dynamical decoupling, twirling, ZNE, M3.
-Not called by runner.py -- import and use manually when needed.
+Not called by runner.py
 """
 import numpy as np
 from qiskit import ClassicalRegister

@@ -97,7 +97,7 @@ def run_phase_2(Space, N, Width, Height):
 
     print(f"Target key: {key}")
     print("Top measured (x, y) pairs:")
-    for (x_val, y_val), count in sorted_results[:10]:
+    for (x_val, y_val), count in sorted_results[:25]:
         marker = " <-- TARGET" if [x_val, y_val] == key else ""
         print(f"  ({x_val}, {y_val}): {count} shots{marker}")
 

@@ -1,11 +1,6 @@
 import math
 
-
 def calculate_dimensions_from_order(r, gamma, N):
-    """
-    Applies Shor's classical factor-finding step to derive the dimensions (factors) of N.
-    Returns a tuple of factors (factor1, factor2) if successful, else (None, None).
-    """
     if r is None or r % 2 != 0:
         return None, None
 

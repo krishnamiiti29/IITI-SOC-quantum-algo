@@ -3,10 +3,6 @@ import math
 
 
 def extract_order_from_counts(counts, t_phase, N, gamma):
-    """
-    Classical continued-fractions post-processing: converts measured
-    phase-register bitstrings into a candidate order r.
-    """
     per_shot = {}
     valid_candidates = []
 
