@@ -5,7 +5,7 @@ from qiskit.circuit.library import MCPhaseGate as MCPGate
 
 def CreateConstrainedEvenSuperposition(Space, N, width):
     n = int(np.ceil(np.log2(N)))
-    targets = [q for q in range(n) if q != 0]
+    targets = list(range(n))
     Space.h(targets)
     return Space
 

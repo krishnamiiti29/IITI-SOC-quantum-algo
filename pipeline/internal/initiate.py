@@ -43,7 +43,7 @@ def KeyChoice(dimension):
 
 def GiveQubitCount(dimension):
     x, y = dimension
-    QubitCount = [int(np.ceil(np.log2(x))), int(np.ceil(np.log2(y)))]
+    QubitCount = [int(np.ceil(np.log2(x + 1))), int(np.ceil(np.log2(y + 1)))]
     return QubitCount
 
 
