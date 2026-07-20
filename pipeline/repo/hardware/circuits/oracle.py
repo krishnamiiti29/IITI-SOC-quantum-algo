@@ -62,13 +62,13 @@ def ApplyHammingWeightResonanceOracle(Space, width, n, target_parity, angle=PI3_
 
     Space.cx(anc_py, anc_px)  # anc_px now holds HW(x) XOR HW(y) mod 2
 
-    if target_parity == 1:
+    if target_parity == 0:
         Space.x(anc_px)
 
     # Apply the pi/3 phase (not a bit flip) to marked branches only.
     Space.p(angle, anc_px)
 
-    if target_parity == 1:
+    if target_parity == 0:
         Space.x(anc_px)
 
     # Uncompute ancillas.

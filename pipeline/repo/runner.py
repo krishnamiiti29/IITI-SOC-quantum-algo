@@ -18,7 +18,7 @@ from hardware.execution.decode import decode_bitstring
 
 NUM_RUNS = 1
 CLASSICAL_REGISTER_NAME = "phase_meas"
-GROVER_ITERATIONS = 8  # fixed-point pi/3 oracle+diffuser rounds; safe to set generously
+GROVER_ITERATIONS = 15  # fixed-point pi/3 oracle+diffuser rounds; safe to set generously
 
 
 def run_phase_1():
