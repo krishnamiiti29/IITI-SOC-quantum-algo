@@ -4,7 +4,7 @@ Edit the values below, then run runner.py.
 """
 
 # Candidate N values (composite integers) the pipeline picks from at random.
-N_VALUES = [18]
+N_VALUES = [14]
 
 # IBM Quantum API key. Leave as None to fall back to locally saved account
 # credentials (set up once via QiskitRuntimeService.save_account(...)).

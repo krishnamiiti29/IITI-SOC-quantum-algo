@@ -24,21 +24,33 @@ def GiveHammingWeight(x):
 
 
 def GiveParity(x):
-    return GiveHammingWeight(x) % 2
+    return GiveHammingWeight(x)
 
 
 def KeyChoice(dimension):
-    x, y = dimension
-    target_parity = GiveParity(x) ^ GiveParity(y)
+    # Rule: HW(w|h) -- the Hamming weight of w and h concatenated -- is
+    # mathematically equal to HW(w) + HW(h), since concatenation just
+    # concatenates the bits and popcount is additive over concatenation.
+    w, h = dimension
+    target_weight = bin(w).count('1') + bin(h).count('1')
 
-    repeat = True
-    while repeat:
-        key_x = random.randrange(2, x + 1, 2)
-        key_y = random.randint(1, y)
-        if (GiveParity(key_x) ^ GiveParity(key_y)) == target_parity:
-            repeat = False
+    # Find the (x, y) pair satisfying HW(x) XOR HW(y) == HW(w|h), with x
+    # restricted to strictly EVEN Hamming weight. This constraint is what
+    # CreateConstrainedEvenSuperposition (oracle.py) mirrors quantum-
+    # mechanically when preparing the search register.
+    for x in range(w + 1):
+        hw_x = bin(x).count('1')
+        if hw_x % 2 != 0:
+            continue
 
-    return [key_x, key_y]
+        for y in range(h + 1):
+            hw_y = bin(y).count('1')
+
+            # Rule: Test if the XOR of their weights matches the target
+            if (hw_x ^ hw_y) == target_weight:
+                return [x, y]
+
+    return {"status": "Failed", "message": "No valid key-state exists for these constraints"}
 
 
 def GiveQubitCount(dimension):
@@ -52,6 +64,8 @@ def Initiate():
     Dimension = DimensionGiver(N)
     print(f"Dimension: {Dimension}")
     print(f"Key : {KeyChoice(Dimension)}")
+
+
 
     register_A = QuantumRegister(GiveQubitCount(Dimension)[0], name='Width')
     register_B = QuantumRegister(GiveQubitCount(Dimension)[1], name='Height')

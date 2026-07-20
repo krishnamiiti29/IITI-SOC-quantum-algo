@@ -9,8 +9,7 @@ from hardware.circuits.unitary import BuildUnitary
 from hardware.circuits.qpe import build_qpe_circuit
 from hardware.circuits.oracle import (
     CreateConstrainedEvenSuperposition,
-    ApplyHammingWeightResonanceOracle,
-    build_pi3_diffuser,
+    build_fixed_point_grover_circuit,
 )
 from hardware.execution.submit import get_service, submit_to_hardware
 from hardware.execution.extract_order import extract_order_from_counts
@@ -19,6 +18,7 @@ from hardware.execution.decode import decode_bitstring
 
 NUM_RUNS = 1
 CLASSICAL_REGISTER_NAME = "phase_meas"
+GROVER_ITERATIONS = 8  # fixed-point pi/3 oracle+diffuser rounds; safe to set generously
 
 
 def run_phase_1():
@@ -65,18 +65,20 @@ def run_phase_2(Space, N, Width, Height):
     width_qubits, height_qubits = GiveQubitCount([Width, Height])
     search_qubits_count = width_qubits + height_qubits
 
-    EvenSpace = CreateConstrainedEvenSuperposition(Space, N, width_qubits)
+    EvenSpace = CreateConstrainedEvenSuperposition(Space, width_qubits, height_qubits)
 
     key = KeyChoice((Width, Height))
     print(f"Key: {key}")
-    print(GiveHammingWeight(key[0]) % 2, GiveHammingWeight(key[1]) % 2)
 
-    EvenSpace.x(search_qubits_count + 2)
-    EvenSpace.h(search_qubits_count + 2)
+    # Target parity the oracle marks: HW(x) XOR HW(y) mod 2, derived from
+    # the actual key (rather than hardcoded), per the HW(x) XOR HW(y) rule.
+    target_parity = (GiveHammingWeight(key[0]) ^ GiveHammingWeight(key[1])) % 2
+    print(f"Target parity (HW(x) XOR HW(y) mod 2): {target_parity}")
 
-    OracleSpace = ApplyHammingWeightResonanceOracle(EvenSpace, width_qubits, search_qubits_count, 1)
-    diffuser = build_pi3_diffuser(search_qubits_count)
-    OracleSpace.append(diffuser, list(range(search_qubits_count)))
+    OracleSpace = build_fixed_point_grover_circuit(
+        EvenSpace, width_qubits, height_qubits, target_parity,
+        iterations=GROVER_ITERATIONS,
+    )
 
     sim_circuit = OracleSpace.copy()
     creg = ClassicalRegister(search_qubits_count, name='result')
