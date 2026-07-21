@@ -1,7 +1,7 @@
 import math
 import random
 import numpy as np
-from qiskit import ClassicalRegister, transpile
+from qiskit import ClassicalRegister, QuantumRegister, transpile
 from qiskit_aer import AerSimulator
 
 from internal.initiate import Initiate, GiveQubitCount, KeyChoice, GiveHammingWeight
@@ -10,7 +10,9 @@ from hardware.circuits.qpe import build_qpe_circuit
 from hardware.circuits.oracle import (
     CreateConstrainedEvenSuperposition,
     build_fixed_point_grover_circuit,
+    build_fixed_point_grover_circuit_popcount,
 )
+from hardware.circuits.popcount import count_register_size
 from hardware.execution.submit import get_service, submit_to_hardware
 from hardware.execution.extract_order import extract_order_from_counts
 from hardware.execution.calculate_dimension import calculate_dimensions_from_order
@@ -75,7 +77,18 @@ def run_phase_2(Space, N, Width, Height):
     target_parity = (GiveHammingWeight(key[0]) ^ GiveHammingWeight(key[1])) % 2
     print(f"Target parity (HW(x) XOR HW(y) mod 2): {target_parity}")
 
-    OracleSpace = build_fixed_point_grover_circuit(
+    # The popcount oracle needs 2*m extra ancilla qubits beyond the search
+    # register (m = size of each HW count register). initiate.py already
+    # provides a small fixed 'Ancilla' register; top it up here if needed
+    # rather than touching initiate.py itself.
+    m_needed = max(count_register_size(width_qubits), count_register_size(height_qubits))
+    popcount_ancillas_needed = 2 * m_needed
+    existing_ancilla_qubits = EvenSpace.num_qubits - search_qubits_count
+    if existing_ancilla_qubits < popcount_ancillas_needed:
+        extra = QuantumRegister(popcount_ancillas_needed - existing_ancilla_qubits, name='PopcountAncilla')
+        EvenSpace.add_register(extra)
+
+    OracleSpace = build_fixed_point_grover_circuit_popcount(
         EvenSpace, width_qubits, height_qubits, target_parity,
         iterations=GROVER_ITERATIONS,
     )
