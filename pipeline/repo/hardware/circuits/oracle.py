@@ -2,6 +2,8 @@ import numpy as np
 from qiskit import QuantumCircuit
 from qiskit.circuit.library import MCPhaseGate
 
+from hardware.circuits.popcount import build_popcount_circuit, count_register_size
+
 # Fixed, non-pi phase used by L.K. Grover's (2005) "fixed-point" search.
 # Using this same partial-reflection angle in BOTH the oracle and the
 # diffuser (instead of the usual pi phase flip) makes amplitude grow
@@ -41,42 +43,55 @@ def CreateConstrainedEvenSuperposition(Space, width_qubits, height_qubits):
     return Space
 
 
-def ApplyHammingWeightResonanceOracle(Space, width, n, target_parity, angle=PI3_ANGLE):
-    """
-    Fixed-point GROVER ORACLE.
+def ApplyHammingWeightResonanceOracle(
+        Space,
+        width,
+        n,
+        target_weight,
+        angle=PI3_ANGLE):
 
-    Computes anc_px = HW(x) XOR HW(y) (mod 2) into an ancilla, then -- rather
-    than a full bit flip / pi phase kickback -- applies the fixed pi/3 phase
-    rotation to exactly the branches where anc_px == target_parity. This is
-    the "marking" half of the matched oracle/diffuser pair used by
-    fixed-point Grover.
-    """
-    anc_px, anc_py = n, n + 1
-    x_qubits = list(range(0, width))
+    x_qubits = list(range(width))
     y_qubits = list(range(width, n))
 
-    for q in x_qubits:
-        Space.cx(q, anc_px)
-    for q in y_qubits:
-        Space.cx(q, anc_py)
+    # Iterate through every computational basis state.
+    for x in range(2 ** len(x_qubits)):
+        hw_x = bin(x).count("1")
 
-    Space.cx(anc_py, anc_px)  # anc_px now holds HW(x) XOR HW(y) mod 2
+        for y in range(2 ** len(y_qubits)):
+            hw_y = bin(y).count("1")
 
-    if target_parity == 1:
-        Space.x(anc_px)
+            # Oracle condition
+            if (hw_x ^ hw_y) != target_weight:
+                continue
 
-    # Apply the pi/3 phase (not a bit flip) to marked branches only.
-    Space.p(angle, anc_px)
+            # Select |x,y>
+            for i, q in enumerate(x_qubits):
+                if ((x >> i) & 1) == 0:
+                    Space.x(q)
 
-    if target_parity == 1:
-        Space.x(anc_px)
+            for i, q in enumerate(y_qubits):
+                if ((y >> i) & 1) == 0:
+                    Space.x(q)
 
-    # Uncompute ancillas.
-    Space.cx(anc_py, anc_px)
-    for q in reversed(y_qubits):
-        Space.cx(q, anc_py)
-    for q in reversed(x_qubits):
-        Space.cx(q, anc_px)
+            # π/3 phase oracle
+            controls = x_qubits + y_qubits
+
+            if len(controls) == 1:
+                Space.p(angle, controls[0])
+            else:
+                gate = MCPhaseGate(angle,
+                                   num_ctrl_qubits=len(controls)-1)
+
+                Space.append(gate, controls)
+
+            # Undo state selection
+            for i, q in enumerate(y_qubits):
+                if ((y >> i) & 1) == 0:
+                    Space.x(q)
+
+            for i, q in enumerate(x_qubits):
+                if ((x >> i) & 1) == 0:
+                    Space.x(q)
 
     return Space
 
@@ -119,6 +134,128 @@ def build_fixed_point_grover_circuit(Space, width_qubits, height_qubits, target_
 
     for _ in range(iterations):
         Space = ApplyHammingWeightResonanceOracle(Space, width_qubits, n, target_parity, angle)
+        Space.append(diffuser, list(range(n)))
+
+    return Space
+
+
+# ---------------------------------------------------------------------------
+# New, additive popcount-based oracle. Does NOT modify or replace anything
+# above. Implements:
+#
+#     |x>, |y> -> Popcount -> |HW(x)>, |HW(y)> -> XOR -> |HW(x) XOR HW(y)>
+#              -> Compare with HW(w||h) -> pi/3 Phase Oracle
+#              -> Uncompute XOR -> Uncompute HW(x), HW(y)
+#
+# using real quantum sub-circuits (hardware/circuits/popcount.py) instead of
+# the classical enumerate-and-flag approach used by
+# ApplyHammingWeightResonanceOracle above.
+# ---------------------------------------------------------------------------
+
+def build_popcount_subcircuits(width_qubits, height_qubits):
+    """
+    Builds the (popcount_x_circ, popcount_y_circ, m) triple used by
+    ApplyHammingWeightPopcountOracle. Factored out so callers that invoke
+    the oracle repeatedly (e.g. once per Grover iteration) can build these
+    once and pass them in via `popcount_circs=`, instead of re-synthesizing
+    the same gates on every call.
+    """
+    m = max(count_register_size(width_qubits), count_register_size(height_qubits))
+    popcount_x_circ = build_popcount_circuit(width_qubits, m, name="popcount_x")
+    popcount_y_circ = build_popcount_circuit(height_qubits, m, name="popcount_y")
+    return popcount_x_circ, popcount_y_circ, m
+
+
+def ApplyHammingWeightPopcountOracle(Space, width_qubits, height_qubits, target_weight,
+                                      angle=PI3_ANGLE, popcount_circs=None):
+    """
+    Quantum-circuit oracle: computes HW(x) and HW(y) into ancilla "count"
+    registers via build_popcount_circuit, XORs them together, applies the
+    pi/3 phase when the XOR matches target_weight, then fully uncomputes
+    the XOR and both popcount ancillas so the ancilla qubits are returned
+    to |0> and can be reused across Grover iterations.
+
+    Requires `Space` to already contain, beyond the width_qubits + height_
+    qubits search register, at least 2 * m extra ancilla qubits, where
+    m = max(count_register_size(width_qubits), count_register_size(height_qubits)).
+
+    `popcount_circs`, if given, should be the (popcount_x_circ, popcount_y_circ,
+    m) tuple returned by build_popcount_subcircuits -- this lets a caller
+    that invokes this function many times (e.g. once per Grover iteration)
+    build the popcount sub-circuits once and reuse them, instead of paying
+    the gate-synthesis cost on every call.
+    """
+    x_qubits = list(range(width_qubits))
+    y_qubits = list(range(width_qubits, width_qubits + height_qubits))
+    n_search = width_qubits + height_qubits
+
+    if popcount_circs is None:
+        popcount_circs = build_popcount_subcircuits(width_qubits, height_qubits)
+    popcount_x_circ, popcount_y_circ, m = popcount_circs
+
+    count_x_qubits = list(range(n_search, n_search + m))
+    count_y_qubits = list(range(n_search + m, n_search + 2 * m))
+
+    if Space.num_qubits < n_search + 2 * m:
+        raise ValueError(
+            f"Space needs at least {n_search + 2 * m} qubits for the popcount "
+            f"oracle (search register={n_search}, two count registers of size "
+            f"{m} each); got {Space.num_qubits}."
+        )
+
+    # Compute HW(x) -> count_x, HW(y) -> count_y
+    Space.append(popcount_x_circ.to_instruction(), x_qubits + count_x_qubits)
+    Space.append(popcount_y_circ.to_instruction(), y_qubits + count_y_qubits)
+
+    # XOR: count_x <- HW(x) XOR HW(y)
+    for cx_q, cy_q in zip(count_x_qubits, count_y_qubits):
+        Space.cx(cy_q, cx_q)
+
+    # Compare count_x (now HW(x) XOR HW(y)) against target_weight: flip the
+    # bits of count_x where target_weight has a 0, so "all ones" on
+    # count_x_qubits means "match", then apply the shared pi/3 phase.
+    target_bits = format(target_weight, f"0{m}b")[::-1]  # LSB-first, matches count_x_qubits order
+    flipped = []
+    for i, b in enumerate(target_bits):
+        if b == "0":
+            Space.x(count_x_qubits[i])
+            flipped.append(count_x_qubits[i])
+
+    if m == 1:
+        Space.p(angle, count_x_qubits[0])
+    else:
+        gate = MCPhaseGate(angle, num_ctrl_qubits=m - 1)
+        Space.append(gate, count_x_qubits)
+
+    for q in flipped:
+        Space.x(q)
+
+    # Uncompute XOR
+    for cx_q, cy_q in zip(count_x_qubits, count_y_qubits):
+        Space.cx(cy_q, cx_q)
+
+    # Uncompute popcounts (restores count_x, count_y ancillas to |0>)
+    Space.append(popcount_y_circ.inverse().to_instruction(label="popcount_y_dg"), y_qubits + count_y_qubits)
+    Space.append(popcount_x_circ.inverse().to_instruction(label="popcount_x_dg"), x_qubits + count_x_qubits)
+
+    return Space
+
+
+def build_fixed_point_grover_circuit_popcount(Space, width_qubits, height_qubits, target_parity,
+                                               iterations, angle=PI3_ANGLE):
+    """
+    New, additive variant of build_fixed_point_grover_circuit that uses the
+    popcount-based oracle (ApplyHammingWeightPopcountOracle) instead of the
+    classical-enumeration oracle. The fixed-point pi/3 diffuser is unchanged
+    and still acts only on the search register qubits [0, n).
+    """
+    n = width_qubits + height_qubits
+    diffuser = build_pi3_diffuser(n, angle)
+    popcount_circs = build_popcount_subcircuits(width_qubits, height_qubits)
+
+    for _ in range(iterations):
+        Space = ApplyHammingWeightPopcountOracle(Space, width_qubits, height_qubits, target_parity, angle,
+                                                  popcount_circs=popcount_circs)
         Space.append(diffuser, list(range(n)))
 
     return Space
