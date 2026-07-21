@@ -31,8 +31,15 @@ def KeyChoice(dimension):
     # Rule: HW(w|h) -- the Hamming weight of w and h concatenated -- is
     # mathematically equal to HW(w) + HW(h), since concatenation just
     # concatenates the bits and popcount is additive over concatenation.
+    # We only need its PARITY here (mod 2): x is constrained to a bounded
+    # range with even Hamming weight and y to a bounded range too, so the
+    # full un-reduced sum HW(w)+HW(h) is frequently larger than any
+    # reachable HW(x) XOR HW(y) in that range (e.g. w=2,h=7 -> sum=4, but
+    # y<=7 can never exceed HW(y)=3). The parity is always reachable, and
+    # matches how runner.py already treats this quantity downstream
+    # (see run_phase_2's target_parity = ... % 2).
     w, h = dimension
-    target_weight = bin(w).count('1') + bin(h).count('1')
+    target_weight = (bin(w).count('1') + bin(h).count('1')) % 2
 
     # Find the (x, y) pair satisfying HW(x) XOR HW(y) == HW(w|h), with x
     # restricted to strictly EVEN Hamming weight. This constraint is what
