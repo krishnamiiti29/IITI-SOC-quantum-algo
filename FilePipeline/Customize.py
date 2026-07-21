@@ -2,7 +2,9 @@
 import random
 
 
+#[15, 21, 27, 33, 35, 39, 51, 55, 57, 65, 69, 77, 85, 87, 91, 93, 95]
+
 def GiveN():
-	N_list = [1,2,3,4,5,6,7,8,9,10]
+	N_list = [15, 21, 27, 33, 35, 39]
 	N = random.choice(N_list)
 	return N

@@ -1,7 +1,7 @@
 #External Imports
 from qiskit.circuit import QuantumRegister, QuantumCircuit
 #Internal Connections
-from DimensionGen import *
+from FilePipeline.Internal.DimensionGen import *
 
 def CreateSpace(N):
 	w,h = CreateDimension(N)
