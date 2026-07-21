@@ -9,3 +9,9 @@ def CreateSpace(N):
 	QRHeight = QuantumRegister(h, name = "Height")
 	QC = QuantumCircuit(QRWidth, QRHeight)
 	return QC, [w,h]
+
+def CreateSpaceDimensioned(Width, Height):
+    QRWidth = QuantumRegister(Width, name="Width")
+    QRHeight = QuantumRegister(Height, name="Height")
+    QC = QuantumCircuit(QRWidth, QRHeight)
+    return QC, QRWidth, QRHeight

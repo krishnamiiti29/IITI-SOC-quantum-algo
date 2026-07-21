@@ -2,6 +2,8 @@ import sys
 import os
 import io
 
+
+
 # 1. FIX: Configure the console stream to safely support UTF-8 characters globally once
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
@@ -13,12 +15,13 @@ if project_root not in sys.path:
 # External Imports
 from FilePipeline.Customize import *
 from FilePipeline.Phases.Phase1 import *
+from FilePipeline.Phases.Phase2 import *
 
 # Initialisation
 N = GiveN()
 print(f"Target Number N: {N}")
 
-# Phase 1 Execution with Automated Retry Loop
+# Phase 1
 MAX_ATTEMPTS = 10
 factors_discovered = None
 
@@ -37,3 +40,11 @@ for attempt in range(MAX_ATTEMPTS):
         continue
 else:
     print(f"\n Failed to isolate factors across {MAX_ATTEMPTS} attempts.")
+
+Width, Height = factors_discovered
+
+# Phase 2
+
+Space = ApplyPhase2(Width, Height)
+
+
