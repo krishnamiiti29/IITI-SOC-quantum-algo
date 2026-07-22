@@ -16,10 +16,16 @@ if project_root not in sys.path:
 from FilePipeline.Customize import *
 from FilePipeline.Phases.Phase1 import *
 from FilePipeline.Phases.Phase2 import *
+from FilePipeline.Internal.DimensionGen import *
+from FilePipeline.Internal.GenerateKey import *
 
 # Initialisation
 N = GiveN()
 print(f"Target Number N: {N}")
+Dimensions = CreateDimension(N)
+print(f"Target Dimension: {Dimensions}")
+Key = GenerateKey(Dimensions)
+print(f"Target Key: {Key}")
 
 # Phase 1
 MAX_ATTEMPTS = 10
