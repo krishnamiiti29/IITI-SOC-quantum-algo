@@ -1,4 +1,4 @@
-# Quantum Valorant
+[](url)# Quantum Valorant
 
 Two-phase hybrid quantum pipeline for IITISoC 2026: Shor's algorithm (via Iterative Quantum Phase Estimation) factors a composite `N` into `(Width, Height)`, and a parity-constrained Grover search then hunts for a hidden `(x, y)` key on that `Width x Height` lattice using a fixed π/3 phase oracle.
 
@@ -230,7 +230,6 @@ A full three-layer error-mitigation stack intended for running the Grover circui
 2. **Zero-noise extrapolation via unitary folding** — `_fold_circuit` implements `U → U (U⁻¹U)^k` at each odd `scale_factor`, runs each folded circuit, and `_zne_extrapolate` fits a polynomial (degree = `order`, default linear) through the `(scale, P(target))` points and extrapolates to `scale = 0` — the noise-free estimate.
 3. **M3 readout correction** — `_m3_correct` uses `mthree.M3Mitigation` to build a calibration and correct the raw counts, but is **skipped** and replaced with plain normalized counts when the backend is a local `AerSimulator` (there's no readout noise to correct against on a simulator).
 
-**Known bug**: the default argument `scale_factors=(1)` is a plain integer `1`, not a one-element tuple `(1,)` — Python parses `(1)` as just `1` due to the missing comma. If this function is ever called *without* explicitly passing `scale_factors`, the `for sf in scale_factors:` loop will crash trying to iterate over an int. It currently isn't called with defaults anywhere, but it also isn't called at all right now (see next section), so this hasn't surfaced yet.
 
 `Phase2.py` now imports and calls `RunWithMitigation` when running on real hardware.
 
@@ -263,18 +262,7 @@ ApplyPhase2(Width, Height) -> dict | None
 
 ---
 
-## Known issues (collected from actual source, not assumptions)
 
-| # | File | Issue |
-|---|------|-------|
-| 1 | `Phase2.py` | `PlotHeatmap` is called but never imported — will crash with `NameError` on every real run right now. |
-| 2 | `Phase2.py` / `Runner.py` | `GenerateKey` is called twice independently (once in `Runner.py` for display, once inside `ApplyPhase2`); since it returns a random valid key each call, the two can differ. |
-| 3 | `Phase_2/Oracle.py` | Diffuser uses `ψ = π/3` (same angle as the oracle) instead of a full `ψ = π` reflection, which weakens the per-iteration rotation and likely means more than 8 iterations are needed to converge well. |
-| 4 | `Phase_2/Mitigation.py` | `RunWithMitigation` default `scale_factors=(1)` is an int, not a tuple — will crash with a `TypeError`/iteration error if `Phase2.py` ever calls it without explicitly passing `scale_factors`. Worth double-checking the call site passes a real tuple like `(1, 3, 5)`. |
-| 5 | `Shors_Algorithm/FindFactor.py` | The `factor_1 < factor_2` swap block is logically broken (doesn't actually swap), but is functionally harmless because `factor_2 = N // factor_1` is unconditionally recomputed right after. Worth cleaning up, not urgent. |
-| 6 | `Phase1.py` | Backend qubit-count request (`min_num_qubits=precision=8`) doesn't account for the IQPE circuit's system register size, which can exceed 8 for larger `N`. |
-| 7 | `Customize.py` | `IBM_API_KEY` / `IBM_INSTANCE_CRN` are placeholder strings, not real credentials — must be filled in before any real-hardware run will succeed. |
-| 8 | `Phases/Initiation.py` | `Initiate()` is unused dead code — not called from `Runner.py` or either phase file. |
 
 ---
 
