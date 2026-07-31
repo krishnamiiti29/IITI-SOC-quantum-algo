@@ -22,6 +22,7 @@ Runner.py
      ├─ CreateEvenSuperposition     → H⊗ on all height qubits, H⊗ on width qubits[1:] (LSB pinned to 0)
      ├─ BuildGroverCircuit          → GROVER_ITERATIONS × (ApplyHammingWeightOracle + BuildDiffuser), angle = π/3
      ├─ backend: least-busy IBM QPU, min 10 qubits
+     ├─ RunWithMitigation           → DD/XY4 + twirling + ZNE (unitary folding) + M3 readout correction
      └─ PlotHeatmap                 → P(x, y) grid over the true Width×Height lattice, target key starred
 ```
 
@@ -87,13 +88,12 @@ python Runner.py
 
 ## Known open issues
 
-- **`Mitigation.py` is not wired into `Phase2.py`.** `ApplyPhase2` runs a bare `backend.run(...)` with no DD/twirling/ZNE/M3 — the full mitigation stack in `Mitigation.py` (DD XY4, gate/measurement twirling, unitary-folded ZNE, M3 readout correction) is implemented but currently dead code. `Phase2.py` also references `PlotHeatmap` without importing it from `HeatmapGen.py`.
 - **`Mitigation.py::RunWithMitigation` default arg bug** — `scale_factors=(1)` is an int, not a tuple; iterating over it will fail. Should be `(1,)` or `(1, 3, 5)`.
 - **`FindFactor.py::recover_factors` swap bug** — the `factor_1 < factor_2` branch assigns `factor_2 = factor_1` before the swap completes (both ends up holding the original `factor_1`). Dead/no-op swap logic.
 - **Backend qubit-count mismatch risk** — Phase 1 requests `min_num_qubits=precision` (8) while Phase 2 requests `min_num_qubits=10`; neither accounts for the system register size in Phase 1's IQPE circuit (`num_qubits = ceil(log2(N))` + 1 phase qubit), which can exceed what a small backend supports post-transpile.
 - **`GenerateKey.py`** iterates only even `x` in `range(0, x, 2)` (note: loop bound reuses the parameter name `x`, shadowing it) — confirm this matches the intended even-width constraint from `EvenSuperposition.py` before large `N` runs.
 
-## Error mitigation stack (`Mitigation.py`, intended for Phase 2)
+## Error mitigation stack (`Mitigation.py`, used in Phase 2)
 
 1. **Dynamical decoupling (XY4)** + **gate/measurement twirling** — applied per-job via `SamplerV2` options.
 2. **Zero-noise extrapolation** — unitary folding `U → U(U⁻¹U)^k` at odd scale factors (1, 3, 5, ...), linear extrapolation to the zero-noise limit via `np.polyfit`.
