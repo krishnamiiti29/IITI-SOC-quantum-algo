@@ -4,12 +4,12 @@ from qiskit_aer import AerSimulator
 from qiskit.transpiler.preset_passmanagers import generate_preset_pass_manager
 from qiskit_ibm_runtime import QiskitRuntimeService, SamplerV2
 
-from FilePipeline.Shors_Algorithm.FindFactor import recover_factors
-from FilePipeline.Shors_Algorithm.IQPE.ClassicalPostProcess import estimate_order_from_counts
-from FilePipeline.Shors_Algorithm.IQPE.CircuitGen import *
-from FilePipeline.Shors_Algorithm.BuildUnitary import *
-from FilePipeline.Shors_Algorithm.Setup import *
-from FilePipeline.Customize import IBM_API_KEY, IBM_INSTANCE_CRN
+from Shors_Algorithm.FindFactor import recover_factors
+from Shors_Algorithm.IQPE.ClassicalPostProcess import estimate_order_from_counts
+from Shors_Algorithm.IQPE.CircuitGen import *
+from Shors_Algorithm.BuildUnitary import *
+from Shors_Algorithm.Setup import *
+from Customize import IBM_API_KEY, IBM_INSTANCE_CRN
 
 
 def _get_backend(min_qubits):

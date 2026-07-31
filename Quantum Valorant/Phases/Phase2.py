@@ -2,12 +2,12 @@ import sys
 import os
 import numpy as np
 
-from FilePipeline.Phases.Phase_2.EvenSuperposition import CreateEvenSuperposition
-from FilePipeline.Phases.Phase_2.Oracle import BuildGroverCircuit
-from FilePipeline.Phases.Phase_2.Mitigation import RunWithMitigation
-from FilePipeline.Internal.GenerateKey import GenerateKey
-from FilePipeline.Internal.GetHammingWeight import GiveHammingWeight
-from FilePipeline.Customize import IBM_API_KEY, IBM_INSTANCE_CRN
+from Phases.Phase_2.EvenSuperposition import CreateEvenSuperposition
+from Phases.Phase_2.Oracle import BuildGroverCircuit
+from Phases.Phase_2.Mitigation import RunWithMitigation
+from Internal.GenerateKey import GenerateKey
+from Internal.GetHammingWeight import GiveHammingWeight
+from Customize import IBM_API_KEY, IBM_INSTANCE_CRN
 
 from qiskit import ClassicalRegister, transpile
 from qiskit_aer import AerSimulator

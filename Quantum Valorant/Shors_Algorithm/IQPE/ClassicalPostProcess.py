@@ -1,4 +1,4 @@
-from FilePipeline.Shors_Algorithm.IQPE.OrderRecovery import *
+from Shors_Algorithm.IQPE.OrderRecovery import *
 
 
 def bitstring_to_phase(bitstring):

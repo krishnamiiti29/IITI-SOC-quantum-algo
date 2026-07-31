@@ -4,15 +4,15 @@ import io
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', line_buffering=True, write_through=True)
 
-project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+project_root = os.path.dirname(os.path.abspath(__file__))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
-from FilePipeline.Customize import *
-from FilePipeline.Phases.Phase1 import *
-from FilePipeline.Phases.Phase2 import *
-from FilePipeline.Internal.DimensionGen import *
-from FilePipeline.Internal.GenerateKey import *
+from Customize import *
+from Phases.Phase1 import *
+from Phases.Phase2 import *
+from Internal.DimensionGen import *
+from Internal.GenerateKey import *
 
 N = GiveN()
 print(f"Target Number N: {N}")

@@ -1,5 +1,5 @@
-from FilePipeline.Internal.GenerateKey import GenerateKey
-from FilePipeline.Internal.SpaceGen import CreateSpace
+from Internal.GenerateKey import GenerateKey
+from Internal.SpaceGen import CreateSpace
 
 
 def Initiate(N):

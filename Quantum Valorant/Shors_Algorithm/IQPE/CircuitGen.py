@@ -3,7 +3,7 @@ import math
 from qiskit.circuit.library import PhaseGate
 from qiskit.circuit.library import UnitaryGate
 
-from FilePipeline.Shors_Algorithm.BuildUnitary import *
+from Shors_Algorithm.BuildUnitary import *
 
 
 def build_iqpe_circuit(U, precision):

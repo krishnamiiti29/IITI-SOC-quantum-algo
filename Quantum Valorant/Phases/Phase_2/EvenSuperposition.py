@@ -1,5 +1,5 @@
 from qiskit import QuantumCircuit, QuantumRegister
-from FilePipeline.Internal.SpaceGen import *
+from Internal.SpaceGen import *
 
 def CreateEvenSuperposition(width, height):
     # Initialize the circuit and registers

@@ -1,6 +1,6 @@
 import random
 
-from FilePipeline.Internal.GetHammingWeight import GiveHammingWeight
+from Internal.GetHammingWeight import GiveHammingWeight
 
 
 def GenerateKey(Dimension):

@@ -1,6 +1,6 @@
 from qiskit.circuit import QuantumRegister, QuantumCircuit
 
-from FilePipeline.Internal.DimensionGen import *
+from Internal.DimensionGen import *
 
 
 def CreateSpace(N):
