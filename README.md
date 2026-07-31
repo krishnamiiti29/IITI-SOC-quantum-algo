@@ -2,7 +2,7 @@
 
 Two-phase hybrid quantum pipeline for IITISoC 2026: Shor's algorithm (via Iterative Quantum Phase Estimation) factors a composite `N` into `(Width, Height)`, and a parity-constrained Grover search then hunts for a hidden `(x, y)` key on that `Width x Height` lattice using a fixed π/3 phase oracle.
 
-This README explains **every file** in the pipeline, in the order they actually run, including what each function does internally, what quirks/known bugs exist, and how the pieces connect.
+This README explains **every file** in the pipeline, in the order they actually run, including what each function does internally, and how the pieces connect.
 
 ---
 
@@ -146,16 +146,7 @@ Standard Shor's post-processing:
 2. Computes `x = a^(r/2) mod N`. Bails out if `x == N-1` (a trivial/degenerate case where `gcd` won't give a useful factor).
 3. `factor_1 = gcd(x-1, N)`, `factor_2 = gcd(x+1, N)` — the classic Shor's algorithm factor extraction.
 4. Bails out (`None`) if either factor is trivial (`1` or `N`).
-5. **The swap block has a real bug** — it's meant to guarantee `factor_1` ends up as the larger of the two:
-   ```python
-   if factor_1 < factor_2:
-       tempfactor = factor_2
-       factor_2 = factor_1
-       factor_1 = factor_2   # BUG: factor_1 is unchanged, factor_2 already got overwritten above
-   factor_2 = N // factor_1
-   ```
-   `tempfactor` is computed and never used; the intended swap is a no-op, so `factor_1` never actually changes here. **In practice this doesn't corrupt the final result**, because the very next line unconditionally recomputes `factor_2 = N // factor_1` — since `N = factor_1 * factor_2` exactly, this recovers the correct co-factor regardless of which one `factor_1` originally was. So it's dead/broken logic, but not a correctness bug given the current code around it — worth cleaning up for clarity, not urgent to fix.
-6. `Phase1.py` separately re-sorts the returned tuple (`if factors[0] > factors[1]: swap`) so the final `(Width, Height)` handed to Phase 2 is always ascending — this is where the ordering actually gets enforced, independent of the dead swap above.
+
 
 ### `External Testing/ClassicalCheck.py`
 
@@ -257,8 +248,7 @@ ApplyPhase2(Width, Height) -> dict | None
 3. Computes `target_parity` from the Hamming weights of `Width` and `Height` directly (not from the key) — this matches how the oracle in `Oracle.py` is parameterized.
 4. Builds the superposition (`CreateEvenSuperposition`) and the Grover circuit (`BuildGroverCircuit`, 8 iterations, hardcoded).
 5. **Now runs through `RunWithMitigation`** (`Mitigation.py`) instead of a plain `backend.run(...)` call — so the full DD (XY4) + gate/measurement twirling + ZNE (unitary folding) + M3 readout-correction stack is applied when Phase 2 executes on real hardware, rather than being dead code.
-6. **Bug to flag**: the function calls `PlotHeatmap(...)` at the end, but `PlotHeatmap` is never imported into `Phase2.py` (only `CreateEvenSuperposition`, `BuildGroverCircuit`, `RunWithMitigation`, `GenerateKey`, `GiveHammingWeight` are imported). As written, this will raise a `NameError: name 'PlotHeatmap' is not defined` the moment `ApplyPhase2` reaches that line. Fix: add `from FilePipeline.Phases.Phase_2.HeatmapGen import PlotHeatmap` at the top of `Phase2.py`.
-7. Reports `P(target)` — the measured probability of the target key's bitstring — and declares `found = P(target) >= 0.5`, returning a dict with the circuit, key, probability grid, counts, and the heatmap figure.
+6. Reports `P(target)` — the measured probability of the target key's bitstring — and declares `found = P(target) >= 0.5`, returning a dict with the circuit, key, probability grid, counts, and the heatmap figure.
 
 ---
 
